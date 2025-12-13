@@ -1,0 +1,82 @@
+cat > .gitignore << 'EOF'
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# AWS Credentials (CRITICAL - NEVER COMMIT!)
+*.pem
+*.key
+.aws/
+aws-credentials.csv
+*_accessKeys.csv
+credentials.csv
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Data files (too large for Git)
+*.csv
+*.xlsx
+*.xls
+data/raw/*.csv
+data/processed/*.csv
+!data/raw/README.md
+!data/processed/README.md
+
+# Model files (too large for Git)
+*.pkl
+*.h5
+*.hdf5
+*.joblib
+*.sav
+models/*.pkl
+models/*.h5
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+EOF
