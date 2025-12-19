@@ -474,7 +474,7 @@ Detailed documentation available in \\`docs/\\`:
 
 🔗 \[LinkedIn](https://linkedin.com/in/kartavvya-joshi)  
 
-💼 \[GitHub](https://github.com/kartavvya)
+💼 \[GitHub](https://github.com/krtvvy)
 
 
 
