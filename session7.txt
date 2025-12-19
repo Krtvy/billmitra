@@ -1,0 +1,1826 @@
+# 🛠️ PART 3 CONTINUED: MODEL TRAINING LINE-BY-LINE
+
+---
+
+## 📝 Cell 4: Helper Function - Evaluate Models
+
+```python
+def evaluate_model(y_true, y_pred, model_name):
+    """
+    Calculate and display model performance metrics
+    """
+    mae = mean_absolute_error(y_true, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+    r2 = r2_score(y_true, y_pred)
+    
+    print(f"\n{'='*50}")
+    print(f"📊 {model_name} Performance Metrics")
+    print(f"{'='*50}")
+    print(f"MAE (Mean Absolute Error):      {mae:.2f} units")
+    print(f"RMSE (Root Mean Squared Error): {rmse:.2f} units")
+    print(f"MAPE (Mean Absolute % Error):   {mape:.2f}%")
+    print(f"R² Score:                       {r2:.4f}")
+    print(f"{'='*50}")
+    
+    return {
+        'model': model_name,
+        'mae': mae,
+        'rmse': rmse,
+        'mape': mape,
+        'r2': r2
+    }
+```
+
+**Why create a function?**
+- We'll evaluate 3 models (ARIMA, Prophet, LSTM)
+- Don't repeat same code 3 times!
+- DRY principle: Don't Repeat Yourself
+
+**Line-by-line**:
+
+**`def evaluate_model(y_true, y_pred, model_name):`**:
+- `def` = Define a function
+- Function name: `evaluate_model`
+- Parameters:
+  - `y_true` = Actual values (ground truth)
+  - `y_pred` = Predicted values
+  - `model_name` = String like "ARIMA" or "Prophet"
+
+**`"""Calculate and display model performance metrics"""`**:
+- Docstring (documentation)
+- Shows when you type `help(evaluate_model)`
+
+**`mae = mean_absolute_error(y_true, y_pred)`**:
+- Call sklearn function
+- Returns single number (MAE)
+- Example: 2.67 means "off by 2.67 units on average"
+
+**`rmse = np.sqrt(mean_squared_error(y_true, y_pred))`**:
+- `mean_squared_error()` = Returns MSE
+- `np.sqrt()` = Take square root → RMSE
+- Why sqrt? MSE is squared, RMSE is in original units
+
+**`mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100`**:
+- Calculate MAPE manually (sklearn doesn't have it)
+- Breaking it down:
+  1. `(y_true - y_pred)` = Errors for each prediction
+  2. `/ y_true` = Divide by actual (percentage error)
+  3. `np.abs(...)` = Absolute value (no negatives)
+  4. `np.mean(...)` = Average of all percentage errors
+  5. `* 100` = Convert to percentage (0.05 → 5%)
+
+**Example MAPE calculation**:
+```python
+y_true = [25, 30, 27]
+y_pred = [23, 28, 31]
+
+errors = [(25-23)/25, (30-28)/30, (27-31)/27]
+       = [0.08, 0.067, -0.148]
+
+abs_errors = [0.08, 0.067, 0.148]
+
+mean = (0.08 + 0.067 + 0.148) / 3 = 0.098
+
+mape = 0.098 * 100 = 9.8%
+```
+
+**`r2 = r2_score(y_true, y_pred)`**:
+- sklearn function for R²
+- Returns value between -∞ to 1.0
+- 1.0 = perfect predictions
+
+**`print(f"\n{'='*50}")`**:
+- `\n` = New line
+- `'='*50` = Repeat '=' character 50 times
+- Creates separator line: ==================================================
+
+**`print(f"{mae:.2f} units")`**:
+- `:.2f` = Format as float with 2 decimal places
+- Example: 2.666666 → 2.67
+
+**`print(f"{r2:.4f}")`**:
+- `:.4f` = 4 decimal places (more precision for R²)
+- Example: 0.85678 → 0.8568
+
+**`return { ... }`**:
+- Return dictionary with all metrics
+- Can store in variable or DataFrame later
+- Allows easy comparison between models
+
+---
+
+## 📝 Cell 5: MODEL 1 - ARIMA Training
+
+```python
+print("🤖 Training ARIMA Model...")
+print("="*50)
+
+# ARIMA parameters (p, d, q)
+p, d, q = 5, 1, 2
+
+# Fit ARIMA model on training data
+arima_model = ARIMA(train_df['QuantitySold'], order=(p, d, q))
+arima_fitted = arima_model.fit()
+
+print(f"✅ ARIMA({p},{d},{q}) model trained!")
+print(f"\nModel Summary:")
+print(arima_fitted.summary())
+
+# Make predictions on test set
+arima_predictions = arima_fitted.forecast(steps=len(test_df))
+
+# Evaluate
+arima_metrics = evaluate_model(
+    test_df['QuantitySold'].values,
+    arima_predictions,
+    "ARIMA"
+)
+```
+
+**Line-by-line**:
+
+**`p, d, q = 5, 1, 2`**:
+- Multiple assignment (assign 3 variables at once)
+- `p=5` = Use last 5 days (AutoRegressive)
+- `d=1` = Difference once (Integrated)
+- `q=2` = Use last 2 errors (Moving Average)
+
+**`arima_model = ARIMA(train_df['QuantitySold'], order=(p, d, q))`**:
+- Create ARIMA model object
+- First argument: Training data (only QuantitySold column)
+- `order=(p, d, q)` = Model configuration
+- **NOTE**: Model NOT trained yet! Just created!
+
+**Real-life analogy**:
+```
+arima_model = Recipe for making cake
+             (ingredients listed, not baked yet)
+```
+
+**`arima_fitted = arima_model.fit()`**:
+- **THIS is where training happens!**
+- `.fit()` = Estimate parameters from data
+- Returns fitted model (with learned parameters)
+- Can take 10-30 seconds depending on data size
+
+**What happens during `.fit()`**:
+```
+1. Takes your sales data: [25, 27, 26, 28, ...]
+2. Tries different parameter values
+3. Finds parameters that minimize prediction errors
+4. Saves best parameters
+5. Returns trained model
+```
+
+**Real-life analogy**:
+```
+arima_fitted = Actually baking the cake
+              (following recipe, cake is done!)
+```
+
+**`print(arima_fitted.summary())`**:
+- Shows detailed model statistics
+- Includes:
+  - Coefficients (AR, MA parameters)
+  - P-values (statistical significance)
+  - AIC/BIC (model quality scores)
+  - Residual statistics
+
+**Example output**:
+```
+                               SARIMAX Results                                
+==============================================================================
+Dep. Variable:        QuantitySold   No. Observations:                  292
+Model:               ARIMA(5, 1, 2)   Log Likelihood                -500.123
+...
+                 coef    std err          z      P>|z|
+-----------------------------------------------------------------
+ar.L1        0.3456      0.071      4.873      0.000
+ar.L2        0.2134      0.069      3.094      0.002
+...
+```
+
+**What to look for**:
+- Low AIC/BIC = Better model
+- Low P-values = Coefficients are significant
+
+**`arima_predictions = arima_fitted.forecast(steps=len(test_df))`**:
+- `.forecast()` = Predict future values
+- `steps=len(test_df)` = How many days to predict
+- Example: If test_df has 73 days, predict 73 days
+- Returns array of predictions
+
+**What `.forecast()` does**:
+```
+Given: Last date in training = Oct 19
+Asked to forecast: 73 days ahead
+
+Internally:
+Day 1 (Oct 20): Use Oct 15-19 data → Predict 25.5
+Day 2 (Oct 21): Use Oct 16-20 data (includes Oct 20 prediction!) → Predict 27.3
+Day 3 (Oct 22): Use Oct 17-21 data → Predict 26.8
+...
+Day 73 (Dec 31): Predict based on recent predictions
+
+Returns: [25.5, 27.3, 26.8, ..., 24.1]
+```
+
+**`arima_metrics = evaluate_model(...)`**:
+- Call our helper function
+- `test_df['QuantitySold'].values` = Actual sales (as numpy array)
+- `arima_predictions` = Predicted sales
+- `"ARIMA"` = Model name for display
+- Returns dictionary with metrics
+
+---
+
+## 📝 Cell 6: Visualize ARIMA Predictions
+
+```python
+plt.figure(figsize=(14, 6))
+plt.plot(train_df['Date'], train_df['QuantitySold'], 
+         label='Training Data', color='blue', alpha=0.6)
+plt.plot(test_df['Date'], test_df['QuantitySold'], 
+         label='Actual Test Data', color='green', marker='o', markersize=4)
+plt.plot(test_df['Date'], arima_predictions, 
+         label='ARIMA Predictions', color='red', linestyle='--', marker='x', markersize=4)
+plt.axvline(x=test_df['Date'].iloc[0], color='gray', linestyle='--', 
+            alpha=0.5, label='Train/Test Split')
+plt.title(f'{PRODUCT} - ARIMA Predictions vs Actual', fontsize=14, fontweight='bold')
+plt.xlabel('Date')
+plt.ylabel('Quantity Sold')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+```
+
+**Line-by-line**:
+
+**`plt.figure(figsize=(14, 6))`**:
+- Create new figure (plot canvas)
+- `figsize=(14, 6)` = Width 14 inches, Height 6 inches
+- Larger figure = easier to see details
+
+**`plt.plot(train_df['Date'], train_df['QuantitySold'], ...)`**:
+- Plot line chart
+- X-axis: Dates from training data
+- Y-axis: Sales from training data
+- `label='Training Data'` = Label for legend
+- `color='blue'` = Line color
+- `alpha=0.6` = Transparency (0=invisible, 1=opaque)
+
+**`marker='o'`**:
+- Add circular markers at each data point
+- Makes individual points visible
+
+**`markersize=4`**:
+- Size of markers (smaller = 4, default = 6)
+
+**`linestyle='--'`**:
+- Dashed line (instead of solid)
+- Options: '-' (solid), '--' (dashed), ':' (dotted), '-.' (dash-dot)
+
+**`plt.axvline(x=test_df['Date'].iloc[0], ...)`**:
+- Add vertical line
+- `x=...` = X-position (first test date)
+- `.iloc[0]` = First element
+- Marks where training ends and testing begins
+
+**`fontweight='bold'`**:
+- Make title bold (easier to read)
+
+**`plt.legend()`**:
+- Show legend with all labels
+- Automatically positions in "best" location
+
+**`plt.grid(True, alpha=0.3)`**:
+- Add grid lines
+- `alpha=0.3` = Faint grid (not distracting)
+
+**`plt.tight_layout()`**:
+- Adjust spacing so labels don't overlap
+- Prevents cut-off text
+
+**`plt.show()`**:
+- Display the plot
+- In Jupyter: Shows inline
+- In script: Opens window
+
+---
+
+## 📝 Cell 7: Save ARIMA Model
+
+```python
+os.makedirs('../models', exist_ok=True)
+joblib.dump(arima_fitted, f'../models/arima_{PRODUCT}.pkl')
+print(f"\n💾 Model saved to: ../models/arima_{PRODUCT}.pkl")
+```
+
+**Line-by-line**:
+
+**`os.makedirs('../models', exist_ok=True)`**:
+- `os.makedirs()` = Create directory (and parent directories)
+- `'../models'` = Path to create
+- `exist_ok=True` = Don't error if directory already exists
+
+**Why?** If `models/` folder doesn't exist yet, create it!
+
+**`joblib.dump(arima_fitted, f'../models/arima_{PRODUCT}.pkl')`**:
+- `joblib.dump()` = Save Python object to file
+- First argument: Object to save (`arima_fitted`)
+- Second argument: Filename
+- `.pkl` = Pickle file extension (convention)
+
+**What gets saved**:
+- All model parameters
+- Learned coefficients
+- Configuration (p, d, q)
+- Everything needed to make predictions later!
+
+**Real-life analogy**:
+```
+Training = Studying for exam (hard work!)
+Saving model = Writing notes in notebook
+Loading model later = Reading notes (instant knowledge!)
+
+Don't want to study again every time!
+```
+
+**File size**: ~50-100 KB (small!)
+
+---
+
+## 📝 Cell 8: MODEL 2 - Prophet Training
+
+```python
+print("🤖 Training Prophet Model...")
+print("="*50)
+
+# Prophet requires specific column names: 'ds' (date) and 'y' (value)
+prophet_train = train_df[['Date', 'QuantitySold']].copy()
+prophet_train.columns = ['ds', 'y']
+
+prophet_test = test_df[['Date', 'QuantitySold']].copy()
+prophet_test.columns = ['ds', 'y']
+
+# Initialize Prophet model
+prophet_model = Prophet(
+    yearly_seasonality=True,
+    weekly_seasonality=True,
+    daily_seasonality=False,
+    seasonality_mode='multiplicative'
+)
+
+# Add Indian holidays
+prophet_model.add_country_holidays(country_name='IN')
+
+# Fit model
+print("Training Prophet (this may take 30-60 seconds)...")
+prophet_model.fit(prophet_train)
+print("✅ Prophet model trained!")
+
+# Make predictions
+future = prophet_model.make_future_dataframe(periods=len(test_df), freq='D')
+forecast = prophet_model.predict(future)
+
+# Extract test set predictions
+prophet_predictions = forecast.iloc[-len(test_df):]['yhat'].values
+
+# Evaluate
+prophet_metrics = evaluate_model(
+    test_df['QuantitySold'].values,
+    prophet_predictions,
+    "Prophet"
+)
+```
+
+**Line-by-line**:
+
+**`prophet_train = train_df[['Date', 'QuantitySold']].copy()`**:
+- `[['Date', 'QuantitySold']]` = Select these two columns only
+- Note: Double brackets `[[...]]` = Select multiple columns
+- `.copy()` = Independent copy
+
+**Why select only 2 columns?**
+- Prophet only needs date and value
+- Other columns (Price, Cost, etc.) ignored for basic forecasting
+- Advanced: Can add as "regressors" but we keep it simple
+
+**`prophet_train.columns = ['ds', 'y']`**:
+- Rename columns
+- Prophet REQUIRES these exact names!
+- `ds` = datestamp
+- `y` = target variable
+
+**Why these names?**
+- Prophet's internal code expects 'ds' and 'y'
+- Won't work with 'Date' and 'Sales'
+- Old design decision by Facebook team
+
+**`prophet_model = Prophet(...)`**:
+- Create Prophet model object
+- Parameters configure what patterns to detect
+
+**`yearly_seasonality=True`**:
+- Look for yearly patterns (seasons, annual cycles)
+- Example: Summer vs Winter, Diwali in November
+- Prophet will automatically find these!
+
+**`weekly_seasonality=True`**:
+- Look for weekly patterns
+- Example: Weekend boost
+- Prophet detects automatically!
+
+**`daily_seasonality=False`**:
+- Don't look for daily patterns
+- Why False? Our data is already daily aggregated
+- If we had hourly data → would set True
+
+**`seasonality_mode='multiplicative'`**:
+- How seasonality combines with trend
+- Two modes:
+
+**Additive** (default):
+```
+Prediction = Trend + Seasonality
+Example: Base 100 + Weekend +20 = 120
+```
+
+**Multiplicative** (our choice):
+```
+Prediction = Trend × Seasonality
+Example: Base 100 × Weekend 1.2 = 120
+```
+
+**Why multiplicative for retail?**
+- Sales grow over time (trend ↑)
+- Weekend boost should grow too!
+- If base sales = 100 → weekend = +20
+- If base sales = 200 → weekend = +40 (not +20!)
+- Multiplicative handles this naturally!
+
+**`prophet_model.add_country_holidays(country_name='IN')`**:
+- Add Indian holidays automatically
+- Prophet knows: Diwali, Holi, Independence Day, etc.
+- Automatically creates holiday indicators!
+
+**Alternative (manual)**:
+```python
+holidays = pd.DataFrame({
+    'holiday': ['Diwali', 'Holi'],
+    'ds': pd.to_datetime(['2024-11-01', '2024-03-25'])
+})
+prophet_model = Prophet(holidays=holidays)
+```
+
+**`prophet_model.fit(prophet_train)`**:
+- Train the model!
+- Takes 30-60 seconds (slower than ARIMA)
+- Why slow? More complex (finding multiple seasonality patterns)
+
+**What happens during training**:
+```
+1. Decompose data into: Trend + Yearly + Weekly + Holidays
+2. Find best parameters for each component
+3. Detect changepoints (where trend changes)
+4. Estimate uncertainty intervals
+5. Return trained model
+```
+
+**`future = prophet_model.make_future_dataframe(periods=len(test_df), freq='D')`**:
+- Create DataFrame with future dates
+- `periods=len(test_df)` = How many days ahead (73 days)
+- `freq='D'` = Daily frequency
+- **IMPORTANT**: Includes training dates + future dates!
+
+**Why include training dates?**
+- Prophet needs full timeline to see patterns
+- Will predict for all dates
+- We'll extract only test predictions later
+
+**Example**:
+```
+Training: Jan 1 - Oct 19 (292 days)
+Future needs: Oct 20 - Dec 31 (73 days)
+
+make_future_dataframe returns:
+Jan 1 - Dec 31 (365 days total)
+```
+
+**`forecast = prophet_model.predict(future)`**:
+- Make predictions for all dates in `future`
+- Returns DataFrame with many columns:
+  - `ds` = Date
+  - `yhat` = Prediction (main column we want!)
+  - `yhat_lower` = Lower bound (pessimistic)
+  - `yhat_upper` = Upper bound (optimistic)
+  - `trend` = Trend component
+  - `yearly` = Yearly seasonality component
+  - `weekly` = Weekly seasonality component
+  - Many more!
+
+**`forecast.iloc[-len(test_df):]['yhat'].values`**:
+- `.iloc[-len(test_df):]` = Select last 73 rows (test period)
+- `['yhat']` = Get prediction column
+- `.values` = Convert to numpy array
+- Why? Our evaluate function expects array, not Series
+
+**Example**:
+```
+forecast has 365 rows (all dates)
+We want last 73 rows (test dates only)
+
+forecast.iloc[-73:] = Last 73 rows
+['yhat'] = Prediction column
+.values = [25.5, 27.3, 26.8, ...]
+```
+
+---
+
+## 📝 Cell 9: Visualize Prophet Components
+
+```python
+fig = prophet_model.plot_components(forecast)
+plt.tight_layout()
+plt.show()
+```
+
+**What this shows**:
+
+**Plot 1: Trend**
+```
+Shows long-term direction
+Example: Sales slowly increasing over year
+Or: Sales stable, no growth
+```
+
+**Plot 2: Weekly Seasonality**
+```
+Shows which days of week sell more
+Example:
+Mon: -2 units
+Tue: -1 unit
+Wed: 0 units
+Thu: +1 unit
+Fri: +2 units
+Sat: +5 units (big boost!)
+Sun: +3 units
+```
+
+**Plot 3: Yearly Seasonality**
+```
+Shows which months sell more
+Example:
+Jan-Oct: Normal
+Nov: BIG spike (Diwali!)
+Dec: Normal
+```
+
+**Plot 4: Holidays**
+```
+Shows impact of each holiday
+Example:
+Diwali: +15 units
+Holi: +8 units
+Independence Day: +3 units
+```
+
+**Why this is GOLD**:
+- See exactly WHY model predicts what it does
+- Business insights: "Weekends drive 30% of sales!"
+- Can show stakeholders: "This is why we stock more in November"
+
+---
+
+## 📝 Cell 10: Save Prophet Model
+
+```python
+joblib.dump(prophet_model, f'../models/prophet_{PRODUCT}.pkl')
+print(f"\n💾 Model saved to: ../models/prophet_{PRODUCT}.pkl")
+```
+
+**Same as ARIMA save!**
+
+**File size**: ~500 KB - 2 MB (larger than ARIMA because more complex)
+
+---
+
+## 📝 Cell 11: MODEL 3 - LSTM Training
+
+**This is the most complex! I'll go VERY slow!**
+
+```python
+print("🤖 Training LSTM Model...")
+print("="*50)
+
+# LSTM requires 3D input: (samples, timesteps, features)
+# We'll use last 30 days to predict next day
+
+LOOKBACK = 30  # Use 30 days of history
+```
+
+**`LOOKBACK = 30`**:
+- How many past days to use for prediction
+- Like weather forecast using last month of data
+- Could be 7, 14, 30, 60... (hyperparameter to tune)
+
+**Why 30?**
+- Enough history to capture patterns
+- Not too much (overfitting risk)
+- Good starting point!
+
+---
+
+### LSTM Data Preparation (The Tricky Part!)
+
+```python
+def create_lstm_dataset(data, lookback=30):
+    """
+    Convert time series to supervised learning format
+    
+    Example: lookback=3
+    Input:  [10, 12, 15, 14, 16] 
+    Output: X=[[10,12,15]], y=[14]
+            X=[[12,15,14]], y=[16]
+    """
+    X, y = [], []
+    for i in range(lookback, len(data)):
+        X.append(data[i-lookback:i])
+        y.append(data[i])
+    return np.array(X), np.array(y)
+```
+
+**This function is CRITICAL! Let me explain with example**:
+
+**Original data** (simplified, only 10 days):
+```
+[25, 27, 26, 28, 30, 29, 31, 27, 28, 30]
+```
+
+**With LOOKBACK=3**:
+
+**Iteration 1** (i=3):
+```
+X: data[0:3] = [25, 27, 26]
+y: data[3] = 28
+
+Meaning: Use [25, 27, 26] to predict 28
+```
+
+**Iteration 2** (i=4):
+```
+X: data[1:4] = [27, 26, 28]
+y: data[4] = 30
+
+Meaning: Use [27, 26, 28] to predict 30
+```
+
+**Iteration 3** (i=5):
+```
+X: data[2:5] = [26, 28, 30]
+y: data[5] = 29
+```
+
+**Continue until end...**
+
+**Final output**:
+```
+X = [
+  [25, 27, 26],  # Predict 28
+  [27, 26, 28],  # Predict 30
+  [26, 28, 30],  # Predict 29
+  [28, 30, 29],  # Predict 31
+  [30, 29, 31],  # Predict 27
+  [29, 31, 27],  # Predict 28
+  [31, 27, 28]   # Predict 30
+]
+
+y = [28, 30, 29, 31, 27, 28, 30]
+```
+
+**Visual representation (sliding window)**:
+```
+Original: [25, 27, 26, 28, 30, 29, 31, 27, 28, 30]
+
+Window 1: [25, 27, 26] → 28
+Window 2:     [27, 26, 28] → 30
+Window 3:         [26, 28, 30] → 29
+Window 4:             [28, 30, 29] → 31
+...
+```
+
+**Real-life analogy**:
+
+**Studying for exam**:
+```
+You review last 3 days of notes to predict tomorrow's topic
+
+Day 1-3 notes → Predict Day 4 topic
+Day 2-4 notes → Predict Day 5 topic
+Day 3-5 notes → Predict Day 6 topic
+```
+
+**LSTM does same with sales data!**
+
+---
+
+### Scale Data for LSTM
+
+```python
+scaler = MinMaxScaler()
+train_scaled = scaler.fit_transform(train_df[['QuantitySold']])
+test_scaled = scaler.transform(test_df[['QuantitySold']])
+```
+
+**Line-by-line**:
+
+**`scaler = MinMaxScaler()`**:
+- Create scaler object
+- Will learn min/max from data
+
+**`train_df[['QuantitySold']]`**:
+- Double brackets `[[...]]` = Return DataFrame (not Series)
+- Why? `.fit_transform()` expects 2D array
+
+**`scaler.fit_transform(train_scaled)`**:
+- `fit()` = Learn min and max from training data
+- `transform()` = Apply scaling
+- Combined into one step!
+
+**What it does**:
+```
+Training data: [20, 25, 30, 35, 40]
+
+fit() learns:
+  min = 20
+  max = 40
+
+transform() applies:
+  20 → (20-20)/(40-20) = 0.0
+  25 → (25-20)/(40-20) = 0.25
+  30 → (30-20)/(40-20) = 0.50
+  35 → (35-20)/(40-20) = 0.75
+  40 → (40-20)/(40-20) = 1.0
+
+Result: [0.0, 0.25, 0.50, 0.75, 1.0]
+```
+
+**`scaler.transform(test_scaled)`**:
+- Only `transform()`, NOT `fit()`!
+- Why? Use same min/max from training!
+- Otherwise: Data leakage! (Test data influences scaling)
+
+**Critical concept**:
+```
+❌ WRONG:
+test_scaler = MinMaxScaler()
+test_scaled = test_scaler.fit_transform(test_data)
+→ Uses test min/max! Leakage!
+
+✅ CORRECT:
+test_scaled = scaler.transform(test_data)
+→ Uses training min/max! No leakage!
+```
+
+---
+
+### Create LSTM Datasets
+
+```python
+X_train, y_train = create_lstm_dataset(train_scaled, LOOKBACK)
+X_test, y_test = create_lstm_dataset(test_scaled, LOOKBACK)
+
+print(f"✅ LSTM dataset created:")
+print(f"   X_train shape: {X_train.shape} (samples, timesteps, features)")
+print(f"   y_train shape: {y_train.shape}")
+print(f"   X_test shape:  {X_test.shape}")
+print(f"   y_test shape:  {y_test.shape}")
+```
+
+**Example output**:
+```
+X_train shape: (262, 30, 1)
+               ^^^  ^^  ^
+               |    |   |
+               |    |   └─ 1 feature (QuantitySold)
+               |    └───── 30 timesteps (LOOKBACK)
+               └────────── 262 samples
+
+y_train shape: (262,)
+
+X_test shape: (43, 30, 1)
+y_test shape: (43,)
+```
+
+**Why 262 training samples?**
+```
+Original training data: 292 days
+First 30 days: Used as initial context (can't predict without history!)
+Remaining: 292 - 30 = 262 samples
+
+Each sample: [30 days] → [1 prediction]
+```
+
+**Why (samples, timesteps, features) shape?**
+- LSTM expects 3D input
+- **samples**: How many training examples
+- **timesteps**: Sequence length (LOOKBACK)
+- **features**: Number of variables (we have 1: QuantitySold)
+
+**If we had multiple features**:
+```
+Features: [QuantitySold, Temperature, IsWeekend]
+Shape: (262, 30, 3)
+              ^^^  ^^  ^
+                   |   └─ 3 features!
+```
+
+---
+
+### Build LSTM Model
+
+```python
+model = Sequential([
+    # First LSTM layer (returns sequences for next layer)
+    LSTM(50, activation='relu', return_sequences=True, input_shape=(LOOKBACK, 1)),
+    Dropout(0.2),
+    
+    # Second LSTM layer
+    LSTM(50, activation='relu', return_sequences=False),
+    Dropout(0.2),
+    
+    # Output layer
+    Dense(1)
+])
+```
+
+**Line-by-line**:
+
+**`model = Sequential([...])`**:
+- Create sequential model (layers in order)
+- Layers listed inside `[...]`
+
+**`LSTM(50, ...)`**:
+- First layer: LSTM with 50 units (memory cells)
+- More units = more capacity to learn patterns
+- But more units = longer training, overfitting risk
+
+**`activation='relu'`**:
+- Activation function (how neurons "fire")
+- ReLU = Rectified Linear Unit
+- Formula: `max(0, x)` (if negative → 0, else keep value)
+- Popular choice for hidden layers
+
+**Other activations**:
+- `sigmoid`: Squashes to [0, 1]
+- `tanh`: Squashes to [-1, 1]
+- `relu`: Most common for hidden layers
+
+**`return_sequences=True`**:
+- Return output for EVERY timestep
+- Why? Next LSTM layer needs sequence input!
+
+**Visual**:
+```
+Input: [day1, day2, ..., day30]
+       
+LSTM with return_sequences=True:
+Output: [out1, out2, ..., out30]  ← All outputs!
+
+LSTM with return_sequences=False:
+Output: [out30]  ← Only last output!
+```
+
+**`input_shape=(LOOKBACK, 1)`**:
+- Only needed for FIRST layer
+- Tells model what input looks like
+- `(30, 1)` = 30 timesteps, 1 feature
+
+**`Dropout(0.2)`**:
+- Randomly set 20% of neurons to 0 during training
+- Prevents overfitting (memorization)
+- Like studying with distractions → more robust learning
+
+**Second `LSTM(50, ...)`**:
+- `return_sequences=False` → Only output last timestep
+- Why? Don't need sequences anymore, just final prediction
+
+**`Dense(1)`**:
+- Output layer
+- 1 neuron = 1 prediction (tomorrow's sales)
+- No activation function = linear output (any value)
+
+**Model architecture visualized**:
+```
+Input: (30, 1)
+  ↓
+[LSTM: 50 units] → Outputs (30, 50)
+  ↓
+[Dropout: 20%]
+  ↓
+[LSTM: 50 units] → Outputs (50,)
+  ↓
+[Dropout: 20%]
+  ↓
+[Dense: 1 unit] → Outputs (1,)
+  ↓
+Final prediction!
+```
+
+---
+
+### Compile Model
+
+```python
+model.compile(
+    optimizer='adam',
+    loss='mean_squared_error',
+    metrics=['mae']
+)
+
+print("\n📐 LSTM Architecture:")
+model.summary()
+```
+
+**`optimizer='adam'`**:
+- Algorithm for updating weights during training
+- Adam = Adaptive Moment Estimation
+- Combines best of two older optimizers (AdaGrad + RMSProp)
+- Almost always a good choice!
+
+**How optimizers work** (simplified):
+```
+1. Make prediction
+2. Calculate error
+3. Adjust weights to reduce error
+4. Repeat!
+
+Adam: Smart about how much to adjust
+- Big errors → big adjustments
+- Small errors → small adjustments
+- Adapts learning rate automatically
+```
+
+**`loss='mean_squared_error'`**:
+- What to minimize during training
+- MSE = (Actual - Predicted)²
+- Penalizes large errors more than small ones
+
+**Why MSE?**
+```
+Error of 10: MSE = 100
+Two errors of 5: MSE = 25 + 25 = 50
+
+Model prefers two small errors over one big error!
+```
+
+**`metrics=['mae']`**:
+- Additional metrics to track (not used for optimization)
+- MAE easier to interpret than MSE
+- Shown during training for monitoring
+
+**`model.summary()`**:
+- Shows model architecture
+- Number of parameters
+- Output shapes
+
+**Example output**:
+```
+Model: "sequential"
+_________________________________________________________________
+Layer (type)                Output Shape              Param #   
+=================================================================
+lstm (LSTM)                 (None, 30, 50)            10400     
+dropout (Dropout)           (None, 30, 50)            0         
+lstm_1 (LSTM)               (None, 50)                20200     
+dropout_1 (Dropout)         (None, 50)                0         
+dense (Dense)               (None, 1)                 51        
+=================================================================
+Total params: 30,651
+Trainable params: 30,651
+Non-trainable params: 0
+```
+
+**Understanding output**:
+- **Output Shape**: Size at each layer
+- **Param #**: Number of weights to learn
+- **Total params: 30,651**: LSTM has LOTS of parameters!
+
+**Why so many parameters?**
+- LSTM is complex (forget gate, input gate, output gate, cell state)
+- 50 units × 4 gates × connections = many weights
+- More parameters = more learning capacity
+
+---
+
+### Train LSTM Model
+
+```python
+print("\n🏋️ Training LSTM (this may take 1-2 minutes)...")
+history = model.fit(
+    X_train, y_train,
+    epochs=50,
+    batch_size=32,
+    validation_split=0.1,
+    verbose=0
+)
+print("✅ LSTM training complete!")
+```
+
+**`history = model.fit(...)`**:
+- Train the model!
+- Returns training history (loss per epoch)
+
+**`X_train, y_train`**:
+- Training data (inputs and targets)
+
+**`epochs=50`**:
+- Go through all data 50 times
+- Each epoch = one complete pass
+- More epochs = more learning (but diminishing returns)
+
+**What happens in one epoch**:
+```
+Epoch 1:
+1. Take batch 1 (32 samples)
+2. Make predictions
+3. Calculate loss
+4. Update weights
+5. Take batch 2 (32 samples)
+6. Repeat steps 2-4
+7. Continue until all samples used
+8. One epoch complete!
+```
+
+**`batch_size=32`**:
+- Process 32 samples at once
+- Why not 1? Too slow!
+- Why not all 262? Too memory intensive, less stable!
+- 32 is good compromise
+
+**`validation_split=0.1`**:
+- Hold out 10% of training data
+- Use for validation (not training!)
+- Helps detect overfitting
+
+**How split works**:
+```
+Training data: 262 samples
+
+Split:
+Training: 262 × 0.9 = 235 samples (used for training)
+Validation: 262 × 0.1 = 27 samples (used for monitoring)
+```
+
+**`verbose=0`**:
+- Don't print progress bars
+- `verbose=1`: Show progress bar (use for debugging)
+- `verbose=2`: Show one line per epoch
+- We set 0 for cleaner output
+
+---
+
+### Visualize Training History
+
+```python
+plt.figure(figsize=(12, 4))
+
+plt.subplot(1, 2, 1)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss During Training')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history['mae'], label='Training MAE')
+plt.plot(history.history['val_mae'], label='Validation MAE')
+plt.title('Model MAE During Training')
+plt.xlabel('Epoch')
+plt.ylabel('MAE')
+plt.legend()
+plt.grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+```
+
+**What to look for**:
+
+**Good training**:
+```
+Training loss: Decreasing smoothly
+Validation loss: Following training loss closely
+
+Epoch 1: Loss=100, Val_loss=105
+Epoch 10: Loss=50, Val_loss=52
+Epoch 50: Loss=5, Val_loss=6
+✅ Good! Model learning without overfitting!
+```
+
+**Overfitting**:
+```
+Training loss: Decreasing
+Validation loss: Increasing (or flat)
+
+Epoch 1: Loss=100, Val_loss=105
+Epoch 10: Loss=50, Val_loss=55
+Epoch 50: Loss=5, Val_loss=50  ← BAD! Validation getting worse!
+❌ Overfitting! Model memorizing training data!
+```
+
+**Underfitting**:
+```
+Both losses: High and not decreasing
+
+Epoch 1: Loss=100, Val_loss=105
+Epoch 50: Loss=95, Val_loss=100
+❌ Not learning! Need more epochs or bigger model!
+```
+
+---
+
+### Make LSTM Predictions
+
+```python
+lstm_predictions_scaled = model.predict(X_test, verbose=0)
+```
+
+**`model.predict(X_test)`**:
+- Make predictions on test data
+- Returns scaled predictions [0, 1]
+
+**Shape**:
+```
+X_test shape: (43, 30, 1)
+Predictions shape: (43, 1)
+
+43 predictions (one per sample)
+```
+
+---
+
+### Inverse Transform (Unscale)
+
+```python
+lstm_predictions = scaler.inverse_transform(lstm_predictions_scaled)
+y_test_unscaled = scaler.inverse_transform(y_test)
+```
+
+**Why inverse transform?**
+- Predictions are in [0, 1] range (scaled)
+- Need to convert back to original units (sales numbers)
+- Use same scaler that did original scaling!
+
+**Example**:
+```
+Scaled prediction: 0.75
+Scaler learned: min=20, max=40
+Inverse: 0.75 × (40-20) + 20 = 35
+
+Back to original units!
+```
+
+---
+
+### Evaluate LSTM
+
+```python
+lstm_metrics = evaluate_model(
+    y_test_unscaled.flatten(),
+    lstm_predictions.flatten(),
+    "LSTM"
+)
+```
+
+**`.flatten()`**:
+- Convert 2D array to 1D
+- `[[25], [27], [26]]` → `[25, 27, 26]`
+- evaluate_model expects 1D arrays
+
+---
+
+### Visualize LSTM Predictions
+
+```python
+test_dates_lstm = test_df['Date'].iloc[LOOKBACK:].reset_index(drop=True)
+test_actual_lstm = test_df['QuantitySold'].iloc[LOOKBACK:].reset_index(drop=True)
+
+plt.figure(figsize=(14, 6))
+plt.plot(train_df['Date'], train_df['QuantitySold'], 
+         label='Training Data', color='blue', alpha=0.6)
+plt.plot(test_dates_lstm, test_actual_lstm, 
+         label='Actual Test Data', color='green', marker='o', markersize=4)
+plt.plot(test_dates_lstm, lstm_predictions, 
+         label='LSTM Predictions', color='orange', linestyle='--', marker='x', markersize=4)
+plt.axvline(x=test_df['Date'].iloc[0], color='gray', linestyle='--', 
+            alpha=0.5, label='Train/Test Split')
+plt.title(f'{PRODUCT} - LSTM Predictions vs Actual', fontsize=14, fontweight='bold')
+plt.xlabel('Date')
+plt.ylabel('Quantity Sold')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+```
+
+**`test_df['Date'].iloc[LOOKBACK:]`**:
+- Skip first 30 test dates
+- Why? LSTM needs 30 days of history
+- Can't predict for first 30 days of test set!
+
+**Example**:
+```
+Test set: Oct 20 - Dec 31 (73 days)
+LOOKBACK: 30 days
+
+LSTM can predict: Nov 19 - Dec 31 (43 days)
+First 30 days: Oct 20 - Nov 18 (no predictions, need history!)
+```
+
+---
+
+### Save LSTM Model
+
+```python
+model.save(f'../models/lstm_{PRODUCT}.h5')
+joblib.dump(scaler, f'../models/lstm_scaler_{PRODUCT}.pkl')
+print(f"\n💾 LSTM model saved to: ../models/lstm_{PRODUCT}.h5")
+print(f"💾 Scaler saved to: ../models/lstm_scaler_{PRODUCT}.pkl")
+```
+
+**Two files saved**:
+
+**1. Model (.h5)**:
+- Keras/TensorFlow format
+- Contains architecture + weights
+- ~500 KB - 2 MB
+
+**2. Scaler (.pkl)**:
+- MinMaxScaler object
+- Needed to scale new data for predictions!
+- Without scaler: Can't make predictions on new data!
+
+**Why separate files?**
+- TensorFlow models: .h5 or .keras format
+- Sklearn objects: .pkl format
+- Different libraries, different formats
+
+---
+
+## 📝 Cell 12: Compare All Models
+
+```python
+print("📊 MODEL COMPARISON")
+print("="*70)
+
+comparison_df = pd.DataFrame([arima_metrics, prophet_metrics, lstm_metrics])
+comparison_df = comparison_df.set_index('model')
+
+print(comparison_df.to_string())
+
+# Determine best model
+best_model = comparison_df['mape'].idxmin()
+print(f"\n🏆 WINNER: {best_model} (Lowest MAPE: {comparison_df.loc[best_model, 'mape']:.2f}%)")
+```
+
+**`pd.DataFrame([arima_metrics, prophet_metrics, lstm_metrics])`**:
+- Create DataFrame from list of dictionaries
+- Each dict becomes a row
+
+**`.set_index('model')`**:
+- Use 'model' column as index (row names)
+- Makes comparison easier to read
+
+**Example output**:
+```
+          mae   rmse   mape     r2
+model                              
+ARIMA    2.67   3.21  10.5%  0.8234
+Prophet  2.14   2.89   8.3%  0.8567
+LSTM     2.41   3.05   9.2%  0.8421
+```
+
+**`comparison_df['mape'].idxmin()`**:
+- `.idxmin()` = Index of minimum value
+- For MAPE column, find which model has lowest
+- Returns model name (e.g., "Prophet")
+
+---
+
+### Visualize Comparison
+
+```python
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+# MAE comparison
+axes[0, 0].bar(comparison_df.index, comparison_df['mae'], 
+               color=['#1f77b4', '#ff7f0e', '#2ca02c'])
+axes[0, 0].set_title('Mean Absolute Error (Lower is Better)', fontweight='bold')
+axes[0, 0].set_ylabel('MAE')
+axes[0, 0].grid(True, alpha=0.3)
+
+# ... (similar for RMSE, MAPE, R²)
+```
+
+**`fig, axes = plt.subplots(2, 2, figsize=(14, 10))`**:
+- Create 2×2 grid of subplots
+- `axes` is 2D array: `axes[0, 0]`, `axes[0, 1]`, `axes[1, 0]`, `axes[1, 1]`
+
+**`axes[0, 0].bar(...)`**:
+- Create bar chart on first subplot (top-left)
+- `comparison_df.index` = Model names (x-axis)
+- `comparison_df['mae']` = MAE values (y-axis)
+- `color=[...]` = Different color for each bar
+
+---
+
+# 🔗 PART 4: CONNECTIONS TO OTHER SESSIONS
+
+---
+
+## 🔄 Session 4 → Session 6
+
+**Session 4: Data Exploration & Cleaning**
+- Cleaned dataset: `featured_indian_retail.csv`
+- Removed duplicates, handled missing values
+- Verified data quality
+
+**Session 6: Model Training**
+- Loads cleaned data: `pd.read_csv('featured_indian_retail.csv')`
+- Relies on clean data for accurate training
+- If data had errors → Models learn wrong patterns!
+
+**Connection**:
+```
+Session 4: Clean data → Save CSV
+    ↓
+Session 6: Load CSV → Train models
+```
+
+---
+
+## 🔄 Session 5 → Session 6
+
+**Session 5: Feature Engineering** (To be done Wednesday!)
+- Creates lag features, rolling averages, temporal features
+- Saves: `featured_indian_retail.csv`
+
+**Session 6: Model Training**
+- Could use these features for better predictions!
+- Advanced models use features as "regressors"
+
+**Current state**: We're using BASIC forecasting (only QuantitySold)
+
+**Future enhancement**:
+```python
+# Prophet with regressors
+model = Prophet()
+model.add_regressor('IsWeekend')  # Use weekend feature!
+model.add_regressor('DaysToDiwali')  # Use holiday proximity!
+model.fit(featured_data)
+```
+
+---
+
+## 🔄 Session 6 → Session 7 (FastAPI)
+
+**Session 6: Model Training**
+- Trains models
+- Saves to files: `prophet_Milk_1L.pkl`
+
+**Session 7: FastAPI**
+- Loads saved models: `joblib.load('prophet_Milk_1L.pkl')`
+- Makes predictions via API
+- Serves to users!
+
+**Connection**:
+```
+Session 6: Train → Save model.pkl
+    ↓
+Session 7: Load model.pkl → Predict → Return JSON
+```
+
+---
+
+## 🔄 Complete Project Flow
+
+```
+Session 1-2: Planning
+    ↓
+Session 3: Get Data
+    ↓
+Session 4: Clean Data → cleaned.csv
+    ↓
+Session 5: Engineer Features → featured.csv ←────┐
+    ↓                                             │
+Session 6: Train Models → model.pkl ←─────────────┤
+    ↓                                             │
+Session 7: API loads model.pkl + featured.csv ────┘
+    ↓
+Session 8-10: Dashboard, Deployment
+```
+
+**Each session builds on previous!**
+
+---
+
+# 🆘 PART 5: COMMON ISSUES & SOLUTIONS
+
+---
+
+## ❌ Issue 1: Prophet Import Error
+
+**Error**:
+```
+ModuleNotFoundError: No module named 'prophet'
+```
+
+**Solution**:
+```bash
+pip install prophet
+
+# If that fails (Windows):
+conda install -c conda-forge prophet
+```
+
+**Why it happens**: Prophet not installed by default
+
+---
+
+## ❌ Issue 2: TensorFlow Not Found
+
+**Error**:
+```
+ModuleNotFoundError: No module named 'tensorflow'
+```
+
+**Solution**:
+```bash
+pip install tensorflow
+
+# Verify:
+python -c "import tensorflow as tf; print(tf.__version__)"
+```
+
+---
+
+## ❌ Issue 3: Training Takes Forever
+
+**Problem**: LSTM training very slow (>10 minutes)
+
+**Solutions**:
+1. Reduce epochs: `epochs=20` instead of 50
+2. Reduce LSTM units: `LSTM(25)` instead of 50
+3. Reduce lookback: `LOOKBACK=14` instead of 30
+4. Use GPU (if available)
+
+---
+
+## ❌ Issue 4: Poor Predictions (High MAPE)
+
+**Problem**: MAPE > 20%
+
+**Possible causes**:
+1. Not enough training data
+2. Data has outliers
+3. Wrong model for pattern
+4. Need feature engineering (Session 5!)
+
+**Solutions**:
+- Try different models
+- Tune hyperparameters (p, d, q for ARIMA)
+- Add more features
+- Remove outliers
+
+---
+
+## ❌ Issue 5: LSTM Overfitting
+
+**Symptoms**:
+- Training loss low, validation loss high
+- Gap increasing over epochs
+
+**Solutions**:
+```python
+# Increase dropout
+Dropout(0.3)  # Instead of 0.2
+
+# Add regularization
+LSTM(50, kernel_regularizer=keras.regularizers.l2(0.01))
+
+# Reduce model size
+LSTM(25)  # Instead of 50
+
+# Early stopping
+from tensorflow.keras.callbacks import EarlyStopping
+early_stop = EarlyStopping(patience=10)
+model.fit(..., callbacks=[early_stop])
+```
+
+---
+
+## ❌ Issue 6: ARIMA Not Converging
+
+**Error**:
+```
+Warning: Maximum Likelihood optimization failed to converge
+```
+
+**Solutions**:
+1. Try different (p,d,q) values
+2. Check for trends: Plot data first!
+3. Difference data manually before ARIMA
+4. Use auto_arima (finds best parameters automatically):
+
+```python
+from pmdarima import auto_arima
+model = auto_arima(train_data, seasonal=False)
+```
+
+---
+
+## ❌ Issue 7: Date Format Issues
+
+**Error**:
+```
+ValueError: day is out of range for month
+```
+
+**Solution**:
+```python
+# Specify date format explicitly
+df['Date'] = pd.to_datetime(df['Date'], format='%Y-%m-%d')
+
+# Or let pandas infer
+df['Date'] = pd.to_datetime(df['Date'], infer_datetime_format=True)
+```
+
+---
+
+## ❌ Issue 8: Memory Error (LSTM)
+
+**Error**:
+```
+ResourceExhaustedError: OOM when allocating tensor
+```
+
+**Solutions**:
+1. Reduce batch size: `batch_size=16`
+2. Reduce LSTM units: `LSTM(25)`
+3. Reduce lookback: `LOOKBACK=14`
+4. Close other applications
+5. Use CPU instead of GPU (if GPU memory limited)
+
+---
+
+# 🎓 PART 6: KEY TAKEAWAYS
+
+---
+
+## ✅ What You Learned
+
+### Machine Learning Fundamentals
+- ✅ What ML is (learning from examples)
+- ✅ Supervised learning (learning with answers)
+- ✅ Time series forecasting (predicting future from past)
+- ✅ Train/test split (avoiding cheating)
+- ✅ Evaluation metrics (MAE, RMSE, MAPE, R²)
+
+### Libraries & Tools
+- ✅ **scikit-learn**: Metrics, scaling, train/test split
+- ✅ **statsmodels**: Statistical models (ARIMA)
+- ✅ **Prophet**: Facebook's forecasting (seasonality, holidays)
+- ✅ **TensorFlow/Keras**: Deep learning (LSTM)
+
+### Three Model Types
+- ✅ **ARIMA**: Statistical, interpretable, good baseline
+- ✅ **Prophet**: Automatic seasonality, handles holidays, robust
+- ✅ **LSTM**: Neural network, captures complex patterns, needs more data
+
+### Practical Skills
+- ✅ Loading and preparing time series data
+- ✅ Creating sequences for LSTM
+- ✅ Training multiple models
+- ✅ Comparing model performance
+- ✅ Saving/loading models
+- ✅ Visualizing predictions
+
+---
+
+## 💡 When to Use Which Model?
+
+### Use ARIMA When:
+- ✅ Need quick baseline
+- ✅ Want interpretability (explain to business)
+- ✅ Data has clear trend/seasonality
+- ✅ Limited computational resources
+
+**Example**: Quick forecast for tomorrow's sales
+
+---
+
+### Use Prophet When:
+- ✅ Have holidays/events to consider
+- ✅ Data has multiple seasonalities (weekly + yearly)
+- ✅ Missing data points (Prophet handles automatically)
+- ✅ Want to explain components (trend, seasonality, holidays)
+
+**Example**: Retail sales with festivals (RECOMMENDED for BillMitra!)
+
+---
+
+### Use LSTM When:
+- ✅ Have lots of training data (>1000 points)
+- ✅ Complex patterns (non-linear relationships)
+- ✅ Multiple features available
+- ✅ Okay with "black box" (less interpretability)
+
+**Example**: High-frequency trading, complex industrial processes
+
+---
+
+## 🎯 Model Comparison Summary
+
+| Aspect | ARIMA | Prophet | LSTM |
+|--------|-------|---------|------|
+| **Complexity** | Medium | Low | High |
+| **Training Speed** | Fast | Medium | Slow |
+| **Data Needed** | 50-100 points | 100-300 points | 1000+ points |
+| **Interpretability** | High | High | Low |
+| **Handles Holidays** | No | Yes! | With features |
+| **Handles Missing Data** | No | Yes | No |
+| **Tuning Required** | Yes (p,d,q) | Minimal | Yes (many!) |
+| **Best For** | Simple trends | Business forecasting | Complex patterns |
+
+---
+
+## 🔮 What's Next?
+
+**Session 8: Model Evaluation**
+- Deeper analysis of predictions
+- Residual analysis
+- Cross-validation
+- Hyperparameter tuning
+
+**Session 9: Dashboard**
+- Streamlit interface
+- Visualize predictions
+- Interactive controls
+- Show model comparisons
+
+**Session 10: Deployment**
+- Deploy to AWS
+- Automated retraining
+- Monitoring in production
+
+---
+
+# 📝 QUICK REFERENCE
+
+---
+
+## Model Training Workflow
+
+```python
+# 1. Load data
+df = pd.read_csv('data.csv')
+df['Date'] = pd.to_datetime(df['Date'])
+
+# 2. Split train/test
+split_idx = int(len(df) * 0.8)
+train = df[:split_idx]
+test = df[split_idx:]
+
+# 3A. Train ARIMA
+from statsmodels.tsa.arima.model import ARIMA
+model = ARIMA(train['Sales'], order=(5,1,2))
+fitted = model.fit()
+predictions = fitted.forecast(steps=len(test))
+
+# 3B. Train Prophet
+from prophet import Prophet
+prophet_data = train[['Date', 'Sales']].rename(columns={'Date': 'ds', 'Sales': 'y'})
+model = Prophet()
+model.fit(prophet_data)
+future = model.make_future_dataframe(periods=len(test))
+forecast = model.predict(future)
+predictions = forecast.iloc[-len(test):]['yhat']
+
+# 3C. Train LSTM
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler()
+train_scaled = scaler.fit_transform(train[['Sales']])
+X_train, y_train = create_sequences(train_scaled, lookback=30)
+
+model = Sequential([
+    LSTM(50, return_sequences=True, input_shape=(30, 1)),
+    LSTM(50),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train, y_train, epochs=50, batch_size=32)
+
+# 4. Evaluate
+from sklearn.metrics import mean_absolute_error
+mae = mean_absolute_error(test['Sales'], predictions)
+print(f"MAE: {mae:.2f}")
+
+# 5. Save model
+import joblib
+joblib.dump(model, 'model.pkl')
+```
+
+---
+
+## Evaluation Metrics Cheat Sheet
+
+```python
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import numpy as np
+
+# MAE - Average absolute error
+mae = mean_absolute_error(y_true, y_pred)
+print(f"MAE: {mae:.2f} units")
+
+# RMSE - Penalizes large errors
+rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+print(f"RMSE: {rmse:.2f} units")
+
+# MAPE - Percentage error
+mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+print(f"MAPE: {mape:.2f}%")
+
+# R² - How much variance explained
+r2 = r2_score(y_true, y_pred)
+print(f"R²: {r2:.4f}")
+```
+
+**Interpretation**:
+- **MAE = 2.5**: On average, off by 2.5 units
+- **RMSE = 3.2**: Large errors penalized (worse than MAE)
+- **MAPE = 10%**: On average, 10% error
+- **R² = 0.85**: Explains 85% of variance (good!)
+
+---
+
+## Hyperparameters to Tune
+
+**ARIMA**:
+- `p`: Number of lag observations (try: 1, 3, 5, 7)
+- `d`: Degree of differencing (try: 0, 1, 2)
+- `q`: Moving average window (try: 0, 1, 2, 3)
+
+**Prophet**:
+- `seasonality_mode`: 'additive' or 'multiplicative'
+- `changepoint_prior_scale`: 0.001 to 0.5 (flexibility of trend)
+- `seasonality_prior_scale`: 1 to 10 (strength of seasonality)
+
+**LSTM**:
+- `units`: 25, 50, 100, 200 (model capacity)
+- `lookback`: 7, 14, 30, 60 (sequence length)
+- `dropout`: 0.1, 0.2, 0.3 (regularization)
+- `batch_size`: 16, 32, 64 (training speed vs accuracy)
+- `epochs`: 20, 50, 100 (training iterations)
+
+---
+
+# 🎉 CONGRATULATIONS!
+
+**You now understand**:
+- ✅ How machine learning works
+- ✅ Three powerful forecasting algorithms
+- ✅ How to train, evaluate, and compare models
+- ✅ Every line of code in our training pipeline
+- ✅ How it all connects to your BillMitra project
+
+**This is ADVANCED knowledge!**
+- Many data scientists don't understand LSTM internals
+- You know statistical AND deep learning approaches
+- You can explain everything in interviews!
+
+---
+
+## 💼 Interview-Ready!
+
+**When asked**: "Tell me about your ML project"
+
+**You can say**:
+"I built a demand forecasting system for retail using three different approaches. I started with ARIMA as a statistical baseline, then used Facebook Prophet to capture weekly and yearly seasonality plus Indian holidays like Diwali. Finally, I implemented an LSTM neural network to capture more complex patterns. I compared them using MAPE and found Prophet performed best at 8.3% error. The models are deployed via FastAPI and serve predictions to a Streamlit dashboard."
+
+**🔥 That's a STRONG answer!**
+
+---
+
+**Ready for the Mind Map next?** 🗺️
+
+**Or any questions about Model Training?** 💬
+
+**Save this to Notion and let me know!** 🚀
