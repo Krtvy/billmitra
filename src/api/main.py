@@ -16,7 +16,7 @@ app = FastAPI(
 # Load models and data
 # Use forward slashes (easier!)
 MODELS_PATH = "C:/Users/karta/Documents/billmitra/models"
-DATA_PATH = "C:/Users/karta/Documents/billmitra/data/processed/featured_indian_retail.csv"
+DATA_PATH = "C:/Users/karta/Documents/billmitra/data/raw/indian_retail_daily_sales.csv"
 # Load data
 df = pd.read_csv(DATA_PATH)
 df['Date'] = pd.to_datetime(df['Date'])
