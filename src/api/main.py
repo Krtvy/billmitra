@@ -5,6 +5,7 @@ import joblib
 import pandas as pd
 from datetime import datetime, timedelta
 import os
+from pricing import calculate_dynamic_price, PRODUCT_BASE_PRICES
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -103,5 +104,58 @@ def get_historical(product: str, days: int = 30):
         "period": f"Last {days} days",
         "data": product_df[['Date', 'QuantitySold']].to_dict('records')
     }
+class PricingRequest(BaseModel):
+    product: str
+    days_ahead: int = 7
+    price_elasticity: float = 0.1
 
+class PricingResponse(BaseModel):
+    product: str
+    base_price: float
+    daily_recommendations: list
+    overall_strategy: dict
+
+@app.post("/pricing", response_model=PricingResponse)
+def get_pricing_recommendations(request: PricingRequest):
+    """
+    Get dynamic pricing recommendations based on demand forecast
+    """
+    product = request.product
+    days = request.days_ahead
+    
+    # Validate product
+    if product not in df['ProductName'].values:
+        raise HTTPException(status_code=404, detail=f"Product '{product}' not found")
+    
+    # Get base price
+    if product not in PRODUCT_BASE_PRICES:
+        raise HTTPException(status_code=404, detail=f"Base price not configured for '{product}'")
+    
+    base_price = PRODUCT_BASE_PRICES[product]
+    
+    # Load model and generate forecast (same as /predict endpoint)
+    model_path = f"{MODELS_PATH}/prophet_{product}.pkl"
+    if not os.path.exists(model_path):
+        raise HTTPException(status_code=404, detail=f"Model for '{product}' not found")
+    
+    model = joblib.load(model_path)
+    
+    # Generate future dates
+    last_date = df[df['ProductName'] == product]['Date'].max()
+    future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=days, freq='D')
+    future_df = pd.DataFrame({'ds': future_dates})
+    
+    # Predict
+    forecast = model.predict(future_df)
+    forecast_values = forecast['yhat'].tolist()
+    
+    # Calculate pricing
+    pricing = calculate_dynamic_price(forecast_values, base_price, request.price_elasticity)
+    
+    return {
+        "product": product,
+        "base_price": base_price,
+        "daily_recommendations": pricing["daily_recommendations"],
+        "overall_strategy": pricing["overall_strategy"]
+    }
 # Run with: uvicorn main:app --reload
