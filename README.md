@@ -492,9 +492,9 @@ Detailed documentation available in \\`docs/\\`:
 
 📧 kartavvyajoshi@gmail.com  
 
-🔗 \[LinkedIn](https://linkedin.com/in/kartavvya-joshi)  
+🔗 \[LinkedIn](https://www.linkedin.com/in/krtvy/)  
 
-💼 \[GitHub](https://github.com/krtvvy)
+💼 \[GitHub](https://github.com/Krtvy)
 
 
 
@@ -533,12 +533,4 @@ MIT License - see LICENSE file for details
 \*\*⚠️ Note\*\*: This project is under active development as part of my hands-on learning journey in Data Engineering and ML. Check back for regular updates!
 
 
-
-\*\*Last Updated\*\*: December 14, 2025  
-
-\*\*Current Session\*\*: 4/10 Complete  
-
-\*\*Next Milestone\*\*: Feature Engineering \& Model Training
-
-EOF
 
