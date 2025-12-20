@@ -369,10 +369,26 @@ billmitra/
 
 **Kartavya Joshi**
 
+<<<<<<< HEAD
 - 📧 Email: kartavvyajoshi@gmail.com
 - 💼 LinkedIn: [linkedin.com/in/krtvy](https://www.linkedin.com/in/krtvy/)
 - 🔗 GitHub: [github.com/Krtvy](https://github.com/Krtvy)
 - 🌐 Portfolio: [Coming Soon]
+=======
+\## 📫 Contact
+
+
+
+\*\*Kartavya Joshi\*\*  
+
+📧 kartavvyajoshi@gmail.com  
+
+🔗 \[LinkedIn](https://www.linkedin.com/in/krtvy/)  
+
+💼 \[GitHub](https://github.com/Krtvy)
+
+
+>>>>>>> a2a5dbf2c1496ef49422bf93dce94cd0b4eee892
 
 ---
 
@@ -401,9 +417,13 @@ For issues, questions, or collaboration:
 
 **⭐ Star this repo if you find it useful!**
 
+<<<<<<< HEAD
 **🔗 Live Demo**: http://34.235.143.4:8501
 EOF
 
 git add README.md
 git commit -m "docs: Update README to reflect deployed production system"
 git push
+=======
+
+>>>>>>> a2a5dbf2c1496ef49422bf93dce94cd0b4eee892
