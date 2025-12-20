@@ -1,3 +1,23 @@
+# 🎯 BillMitra - Live Demo
+
+**Try it now:** http://34.235.143.4:8501
+
+## Quick Links
+- 📊 Dashboard: http://34.235.143.4:8501
+- 🔧 API Docs: http://34.235.143.4:8000/docs
+- 💻 GitHub: https://github.com/Krtvy/billmitra
+
+## Features
+✅ AI-Powered Demand Forecasting (Prophet ML)
+✅ Dynamic Pricing Engine (Revenue Optimization)
+✅ Interactive Dashboard (Streamlit)
+✅ REST API (FastAPI)
+✅ Deployed on AWS EC2
+
+
+
+
+
 cat > README.md << 'EOF'
 
 \# 🛒 BillMitra - Retail Intelligence Platform
